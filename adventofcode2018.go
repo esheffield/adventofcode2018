@@ -1,1 +1,0 @@
-package adventofcode2018

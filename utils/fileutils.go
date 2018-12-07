@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// ReadFile Read entire file into an array of string
 func ReadFile(path string) ([]string, error) {
 	var lines []string
 	file, err := os.Open(path)
