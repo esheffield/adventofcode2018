@@ -21,13 +21,19 @@ const (
 	Wake       Action = iota
 )
 
-type Entry struct {
+type LogEntry struct {
 	t        time.Time
 	guardNum int
 	action   Action
 }
 
-func parseLine(source string) Entry {
+type Guard struct {
+	guardNum   int
+	minutes    [60]int
+	totalSlept int
+}
+
+func parseLine(source string) LogEntry {
 	line := strings.SplitAfterN(source, "]", 2)
 
 	re := regexp.MustCompile("#([\\d]+)")
@@ -51,7 +57,34 @@ func parseLine(source string) Entry {
 		panic(err)
 	}
 
-	return Entry{t, guardNum, action}
+	return LogEntry{t, guardNum, action}
+}
+
+func findMaxSleepGuard(guards map[int]Guard) Guard {
+	var selectedGuard Guard
+	maxSleep := -1
+	for _, guard := range guards {
+		if guard.totalSlept > maxSleep {
+			selectedGuard = guard
+			maxSleep = guard.totalSlept
+		}
+	}
+
+	return selectedGuard
+}
+
+func findMostSleptMinute(guard Guard) int {
+	max := -1
+	maxMinute := -1
+
+	for i, timesSlept := range guard.minutes {
+		if timesSlept > max {
+			max = timesSlept
+			maxMinute = i
+		}
+	}
+
+	return maxMinute
 }
 
 func main() {
@@ -63,21 +96,57 @@ func main() {
 
 	input := args[1]
 
+	fmt.Println("Reading ", input)
 	lines, err := utils.ReadFile(input)
 
 	if err != nil {
 		panic(err)
 	}
 
-	var entries []Entry
+	fmt.Println("Parsing entries...")
+	var entries []LogEntry
 	for _, line := range lines {
 		entries = append(entries, parseLine(line))
 	}
 
+	fmt.Println("Sorting...")
 	sort.Slice(entries[:], func(i, j int) bool {
 		return entries[i].t.Before(entries[j].t)
 	})
 
-	var sleepMinutes [][60]int
+	sleepMinutes := make(map[int]Guard)
 
+	curGuard := -1
+	var sleepTime time.Time
+
+	fmt.Println("Processing entries...")
+	for _, entry := range entries {
+		switch entry.action {
+		case BeginShift:
+			curGuard = entry.guardNum
+			if _, ok := sleepMinutes[curGuard]; !ok {
+				sleepMinutes[curGuard] = Guard{guardNum: curGuard}
+			}
+		case Sleep:
+			sleepTime = entry.t
+		case Wake:
+			for minute := sleepTime.Minute(); minute < entry.t.Minute(); minute++ {
+				guard := sleepMinutes[curGuard]
+				guard.minutes[minute]++
+				guard.totalSlept++
+				sleepMinutes[curGuard] = guard
+			}
+		}
+	}
+
+	fmt.Println("Find sleepiest guard...")
+	sleepiestGuard := findMaxSleepGuard(sleepMinutes)
+
+	fmt.Println("Find most slept minute...")
+	sleepiestMinute := findMostSleptMinute(sleepiestGuard)
+
+	fmt.Println("Sleepiest guard: ", sleepiestGuard)
+	fmt.Println("Most slept minute: ", sleepiestMinute)
+
+	fmt.Println("Code: ", sleepiestGuard.guardNum*sleepiestMinute)
 }
