@@ -60,17 +60,22 @@ func parseLine(source string) LogEntry {
 	return LogEntry{t, guardNum, action}
 }
 
-func findMaxSleepGuard(guards map[int]Guard) Guard {
+func findMaxSleepGuard(guards map[int]Guard) (Guard, int) {
 	var selectedGuard Guard
-	maxSleep := -1
+	maxMinute := -1
+	timesAsleep := -1
+
 	for _, guard := range guards {
-		if guard.totalSlept > maxSleep {
+		mostSleptMinute := findMostSleptMinute(guard)
+
+		if asleep := guard.minutes[mostSleptMinute]; asleep > timesAsleep {
 			selectedGuard = guard
-			maxSleep = guard.totalSlept
+			maxMinute = mostSleptMinute
+			timesAsleep = asleep
 		}
 	}
 
-	return selectedGuard
+	return selectedGuard, maxMinute
 }
 
 func findMostSleptMinute(guard Guard) int {
@@ -139,14 +144,11 @@ func main() {
 		}
 	}
 
-	fmt.Println("Find sleepiest guard...")
-	sleepiestGuard := findMaxSleepGuard(guards)
+	fmt.Println("Find guard with most slept minute...")
+	sleepiestGuard, mostSleptMinute := findMaxSleepGuard(guards)
 
-	fmt.Println("Find most slept minute...")
-	sleepiestMinute := findMostSleptMinute(sleepiestGuard)
+	fmt.Println("Guard with most slept minute: ", sleepiestGuard)
+	fmt.Println("Most slept minute: ", mostSleptMinute)
 
-	fmt.Println("Sleepiest guard: ", sleepiestGuard)
-	fmt.Println("Most slept minute: ", sleepiestMinute)
-
-	fmt.Println("Code: ", sleepiestGuard.guardNum*sleepiestMinute)
+	fmt.Println("Code: ", sleepiestGuard.guardNum*mostSleptMinute)
 }
