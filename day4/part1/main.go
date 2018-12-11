@@ -15,10 +15,10 @@ import (
 type Action int
 
 const (
-	NONE        Action = iota
-	BEGIN_SHIFT Action = iota
-	SLEEP       Action = iota
-	WAKE        Action = iota
+	None       Action = iota
+	BeginShift Action = iota
+	Sleep      Action = iota
+	Wake       Action = iota
 )
 
 type Entry struct {
@@ -31,15 +31,16 @@ func parseLine(source string) Entry {
 	line := strings.SplitAfterN(source, "]", 2)
 
 	re := regexp.MustCompile("#([\\d]+)")
-	action := NONE
+	description := strings.TrimSpace(line[1])
+	action := None
 	guardNum := -1
-	if strings.HasPrefix(line[1], "wakes") {
-		action = WAKE
-	} else if strings.HasPrefix(line[1], "falls") {
-		action = SLEEP
+	if strings.HasPrefix(description, "wakes") {
+		action = Wake
+	} else if strings.HasPrefix(description, "falls") {
+		action = Sleep
 	} else {
-		action = BEGIN_SHIFT
-		guardNumParts := re.FindStringSubmatch(line[1])
+		action = BeginShift
+		guardNumParts := re.FindStringSubmatch(description)
 		if len(guardNumParts) == 2 {
 			guardNum, _ = strconv.Atoi(guardNumParts[1])
 		}
@@ -72,12 +73,11 @@ func main() {
 	for _, line := range lines {
 		entries = append(entries, parseLine(line))
 	}
-	fmt.Println(entries)
 
 	sort.Slice(entries[:], func(i, j int) bool {
 		return entries[i].t.Before(entries[j].t)
 	})
 
-	fmt.Println(entries)
+	var sleepMinutes [][60]int
 
 }
