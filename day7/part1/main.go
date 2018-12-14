@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"sort"
 
 	"github.com/esheffield/adventofcode2018/utils"
 )
@@ -16,7 +15,7 @@ type Step struct {
 	prev []int
 }
 
-func parseLines(lines []string) ([]Step, int) {
+func parseLines(lines []string) []Step {
 	steps := make([]Step, 26)
 	for i := 0; i < 26; i++ {
 		step := steps[i]
@@ -40,45 +39,60 @@ func parseLines(lines []string) ([]Step, int) {
 		steps[stepId-offset] = step
 	}
 
-	start := -1
-	for i, step := range steps {
-		if step.id != rune(-1) {
-			sort.Ints(step.next)
-			sort.Ints(step.prev)
-			if len(step.prev) == 0 {
-				start = i
-			}
+	return steps
+}
+
+func removeElt(elts []int, elt int) []int {
+	loc := -1
+	for i, e := range elts {
+		if e == elt {
+			loc = i
+			break
 		}
 	}
 
-	return steps, start
+	if loc != -1 {
+		return append(elts[:loc], elts[loc+1:]...)
+	}
+
+	return elts
+}
+
+func findRune(runes []rune, r rune) int {
+	for i, elt := range runes {
+		if elt == r {
+			return i
+		}
+	}
+
+	return -1
 }
 
 func doSteps(steps []Step) []rune {
 	var seq []rune
-	for i, step := range steps {
-		if step.id != rune(-1) && len(step.prev) == 0 {
-			seq = append(seq, traverse(steps, i)...)
+	stepCnt := 0
+	for _, step := range steps {
+		if step.id != rune(-1) {
+			stepCnt++
+		}
+	}
+
+	for len(seq) != stepCnt {
+		fmt.Println("Seq: ", string(seq))
+		for i, step := range steps {
+			if step.id != rune(-1) && findRune(seq, step.id) == -1 && len(step.prev) == 0 {
+				for _, nextStepIdx := range step.next {
+					nextStep := steps[nextStepIdx]
+					nextStep.prev = removeElt(nextStep.prev, i)
+					steps[nextStepIdx] = nextStep
+				}
+				seq = append(seq, step.id)
+				break
+			}
 		}
 	}
 
 	return seq
-}
-
-func traverse(steps []Step, start int) []rune {
-	var seq []rune
-	step := steps[start]
-
-	fmt.Println("Step: ", step)
-	for _, nextStepId := range step.next {
-		nextStep := steps[nextStepId]
-		fmt.Println("\t", step.id, " -> Next: ", nextStep)
-		if len(nextStep.prev) > 0 && nextStep.prev[len(nextStep.prev)-1] == start {
-			seq = append(seq, traverse(steps, nextStepId)...)
-		}
-	}
-
-	return append([]rune{step.id}, seq...)
 }
 
 func main() {
@@ -97,9 +111,8 @@ func main() {
 		panic(err)
 	}
 
-	steps, start := parseLines(lines)
+	steps := parseLines(lines)
 
-	fmt.Println("Start: ", start)
 	fmt.Println(steps)
 
 	path := doSteps(steps)
